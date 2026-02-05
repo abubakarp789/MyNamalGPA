@@ -2,6 +2,7 @@
  import { Button } from "@/components/ui/button";
  import { useTheme } from "@/components/ThemeProvider";
  import { Moon, Sun } from "lucide-react";
+import namalLogo from "@/assets/namal-logo.png";
  
  interface HeroSectionProps {
    onScrollToCalculator: () => void;
@@ -43,19 +44,23 @@
          {/* Main content */}
          <div className="text-center space-y-6">
            <div className="flex justify-center">
-             <div className="p-4 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20">
-               <GraduationCap className="h-16 w-16 md:h-20 md:w-20" />
+            <div className="p-3 bg-white/90 backdrop-blur-sm rounded-2xl border border-white/20 shadow-xl">
+              <img 
+                src={namalLogo} 
+                alt="Namal University Logo" 
+                className="h-20 w-20 md:h-28 md:w-28 object-contain"
+              />
              </div>
            </div>
  
            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight">
-             GPA & CGPA
-             <span className="block text-accent">Calculator</span>
+            <span className="block">Namal University</span>
+            <span className="block text-accent mt-2">GPA Calculator</span>
            </h1>
  
            <p className="text-lg md:text-xl text-white/80 max-w-2xl mx-auto leading-relaxed">
-             Calculate your semester GPA and cumulative CGPA using the official 
-             Pakistani HEC grading scale. Built for Namal University students.
+            Calculate your semester GPA and cumulative CGPA using the official Pakistani HEC grading scale. 
+            Designed specifically for Namal University students.
            </p>
  
            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
