@@ -1,11 +1,10 @@
  import { useState, useMemo, useRef } from "react";
-import { useTheme } from "@/components/ThemeProvider";
  import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
  import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
  import { Button } from "@/components/ui/button";
  import { Input } from "@/components/ui/input";
-import { GraduationCap, BookOpen, Calculator, RotateCcw, Info, TrendingUp, Plus, Trash2, Download, Share2, Check, Sun, Moon } from "lucide-react";
+import { BookOpen, Calculator, RotateCcw, Info, TrendingUp, Plus, Trash2, Download, Share2, Check } from "lucide-react";
  import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
  import html2canvas from "html2canvas";
  import { jsPDF } from "jspdf";
@@ -44,8 +43,6 @@ import { GraduationCap, BookOpen, Calculator, RotateCcw, Info, TrendingUp, Plus,
  const generateId = () => Math.random().toString(36).substr(2, 9);
  
  export function GPACalculator() {
-  const { theme, toggleTheme } = useTheme();
-
    // Courses state
    const [courses, setCourses] = useState<Course[]>([
      { id: generateId(), name: "Course 1", credits: 3 },
@@ -274,33 +271,7 @@ import { GraduationCap, BookOpen, Calculator, RotateCcw, Info, TrendingUp, Plus,
   };
 
    return (
-     <div className="min-h-screen bg-background">
-       {/* Header */}
-       <header className="bg-primary text-primary-foreground py-6 px-4 shadow-lg">
-         <div className="container mx-auto max-w-4xl">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <GraduationCap className="h-10 w-10" />
-                <div>
-                  <h1 className="text-2xl md:text-3xl font-bold">GPA Calculator</h1>
-                  <p className="text-primary-foreground/80 text-sm md:text-base">
-                    Pakistani HEC Grading Scale
-                  </p>
-                </div>
-             </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleTheme}
-                className="text-primary-foreground hover:bg-primary-foreground/20"
-              >
-                {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-              </Button>
-           </div>
-         </div>
-       </header>
- 
-       <main className="container mx-auto max-w-4xl px-4 py-6 space-y-6">
+     <div className="space-y-6">
          {/* GPA Display Card */}
         <Card className="border-2 border-primary/20 shadow-xl" ref={resultCardRef}>
            <CardContent className="pt-6">
@@ -633,12 +604,6 @@ import { GraduationCap, BookOpen, Calculator, RotateCcw, Info, TrendingUp, Plus,
              </Card>
            </TabsContent>
          </Tabs>
- 
-         {/* Footer */}
-         <footer className="text-center text-sm text-muted-foreground pt-6 pb-4">
-           <p>Pakistani HEC Grading Scale • GPA & CGPA Calculator</p>
-         </footer>
-       </main>
      </div>
    );
  }
