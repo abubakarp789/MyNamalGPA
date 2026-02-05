@@ -1,10 +1,10 @@
  import { useState, useMemo } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
  import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
  import { Button } from "@/components/ui/button";
  import { Input } from "@/components/ui/input";
  import { Label } from "@/components/ui/label";
- import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
  import { GraduationCap, BookOpen, Calculator, RotateCcw, Info } from "lucide-react";
  
  // HEC Pakistan Grading Scale
@@ -32,12 +32,26 @@
    { code: "CS-430", name: "Final Year Project I", credits: 3 },
  ];
  
+// Previous semester data from transcript
+const SEMESTER_HISTORY = [
+  { semester: "Fall 2022", credits: 17, gpa: 3.02, cgpa: 3.02 },
+  { semester: "Spring 2023", credits: 17, gpa: 2.59, cgpa: 2.80 },
+  { semester: "Fall 2023", credits: 19, gpa: 2.37, cgpa: 2.65 },
+  { semester: "Spring 2024", credits: 17, gpa: 2.70, cgpa: 2.70 },
+  { semester: "Fall 2024", credits: 17, gpa: 2.82, cgpa: 2.58 },
+  { semester: "Spring 2025", credits: 17, gpa: 2.90, cgpa: 2.72 },
+];
+
+// Calculate total previous credits and quality points
+const TOTAL_PREVIOUS_CREDITS = SEMESTER_HISTORY.reduce((sum, s) => sum + s.credits, 0); // 104 credits
+const PREVIOUS_CGPA = SEMESTER_HISTORY[SEMESTER_HISTORY.length - 1].cgpa; // 2.72
+
  type CourseGrades = Record<string, string>;
  
  export function GPACalculator() {
    const [courseGrades, setCourseGrades] = useState<CourseGrades>({});
-   const [previousCredits, setPreviousCredits] = useState<string>("");
-   const [previousGPA, setPreviousGPA] = useState<string>("");
+  const [previousCredits, setPreviousCredits] = useState<string>(TOTAL_PREVIOUS_CREDITS.toString());
+  const [previousGPA, setPreviousGPA] = useState<string>(PREVIOUS_CGPA.toString());
  
    const totalCredits = COURSES.reduce((sum, course) => sum + course.credits, 0);
  
@@ -85,8 +99,8 @@
  
    const handleReset = () => {
      setCourseGrades({});
-     setPreviousCredits("");
-     setPreviousGPA("");
+    setPreviousCredits(TOTAL_PREVIOUS_CREDITS.toString());
+    setPreviousGPA(PREVIOUS_CGPA.toString());
    };
  
    const gradedCoursesCount = Object.keys(courseGrades).length;
@@ -205,19 +219,50 @@
            <TabsContent value="cgpa">
              <Card>
                <CardHeader>
-                 <CardTitle className="text-lg">Previous Semesters</CardTitle>
+                <CardTitle className="text-lg">Academic History</CardTitle>
                </CardHeader>
                <CardContent className="space-y-4">
-                 <p className="text-sm text-muted-foreground">
-                   Enter your previous semesters' total credit hours and GPA to calculate your cumulative CGPA.
-                 </p>
+                {/* Semester History Table */}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-2 font-medium">Semester</th>
+                        <th className="text-center py-2 font-medium">CH</th>
+                        <th className="text-center py-2 font-medium">GPA</th>
+                        <th className="text-center py-2 font-medium">CGPA</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {SEMESTER_HISTORY.map((sem, idx) => (
+                        <tr key={idx} className="border-b border-border/50">
+                          <td className="py-2">{sem.semester}</td>
+                          <td className="text-center py-2">{sem.credits}</td>
+                          <td className="text-center py-2">{sem.gpa.toFixed(2)}</td>
+                          <td className="text-center py-2 font-medium text-primary">{sem.cgpa.toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="p-3 bg-secondary rounded-lg text-sm">
+                  <p className="text-muted-foreground">
+                    Total: <span className="font-semibold text-foreground">{TOTAL_PREVIOUS_CREDITS} credits</span> with CGPA of <span className="font-semibold text-primary">{PREVIOUS_CGPA.toFixed(2)}</span>
+                  </p>
+                </div>
+
+                <div className="pt-4 border-t">
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Adjust values if needed:
+                  </p>
                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                    <div className="space-y-2">
                      <Label htmlFor="prevCredits">Total Credits Earned</Label>
                      <Input
                        id="prevCredits"
                        type="number"
-                       placeholder="e.g., 102"
+                      placeholder="e.g., 104"
                        value={previousCredits}
                        onChange={(e) => setPreviousCredits(e.target.value)}
                        min="0"
@@ -238,13 +283,15 @@
                      />
                    </div>
                  </div>
+                </div>
+
                  {previousCredits && previousGPA && semesterGPA !== null && (
                    <div className="mt-4 p-4 bg-secondary rounded-lg">
                      <p className="text-sm text-muted-foreground">
-                       With {previousCredits} previous credits at {previousGPA} GPA and current semester performance:
+                      With {previousCredits} previous credits at {previousGPA} CGPA + 7th semester:
                      </p>
                      <p className="text-2xl font-bold text-primary mt-2">
-                       New CGPA: {cgpa?.toFixed(2)}
+                      Projected CGPA: {cgpa?.toFixed(2)}
                      </p>
                    </div>
                  )}
@@ -277,7 +324,7 @@
  
          {/* Footer */}
          <footer className="text-center text-sm text-muted-foreground pt-6 pb-4">
-           <p>7th Semester • BS Computer Science • Namal University</p>
+          <p>7th Semester • BS Computer Science • NUM-BSCS-2022-41</p>
          </footer>
        </main>
      </div>
