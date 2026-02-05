@@ -1,14 +1,11 @@
- import { GraduationCap, ArrowDown, Sparkles } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
  import { Button } from "@/components/ui/button";
  import { useTheme } from "@/components/ThemeProvider";
  import { Moon, Sun } from "lucide-react";
+import { Link } from "react-router-dom";
 import namalLogo from "@/assets/namal-logo.png";
  
- interface HeroSectionProps {
-   onScrollToCalculator: () => void;
- }
- 
- export function HeroSection({ onScrollToCalculator }: HeroSectionProps) {
+export function HeroSection() {
    const { theme, toggleTheme } = useTheme();
  
    return (
@@ -66,11 +63,13 @@ import namalLogo from "@/assets/namal-logo.png";
            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
              <Button
                size="lg"
-               onClick={onScrollToCalculator}
+              asChild
                className="bg-accent text-accent-foreground hover:bg-accent/90 text-lg px-8 py-6 rounded-xl shadow-lg shadow-accent/25"
              >
-               Start Calculating
-               <ArrowDown className="ml-2 h-5 w-5 animate-bounce" />
+              <Link to="/calculator">
+                Start Calculating
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
              </Button>
            </div>
          </div>
