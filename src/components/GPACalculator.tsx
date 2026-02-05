@@ -1,11 +1,14 @@
- import { useState, useMemo } from "react";
+ import { useState, useMemo, useRef } from "react";
  import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
  import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
  import { Button } from "@/components/ui/button";
  import { Input } from "@/components/ui/input";
- import { GraduationCap, BookOpen, Calculator, RotateCcw, Info, TrendingUp, Plus, Trash2 } from "lucide-react";
+ import { GraduationCap, BookOpen, Calculator, RotateCcw, Info, TrendingUp, Plus, Trash2, Download, Share2, Check, Copy } from "lucide-react";
  import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+ import html2canvas from "html2canvas";
+ import { jsPDF } from "jspdf";
+ import { toast } from "@/hooks/use-toast";
  
  // HEC Pakistan Grading Scale
  const GRADES = [
@@ -163,6 +166,110 @@
    const gradedCoursesCount = Object.keys(courseGrades).length;
    const totalPreviousCredits = semesters.reduce((sum, s) => sum + s.credits, 0);
  
+  const resultCardRef = useRef<HTMLDivElement>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  // Generate share link with current state
+  const generateShareLink = () => {
+    const state = {
+      c: courses.map(c => ({ n: c.name, cr: c.credits })),
+      g: Object.entries(courseGrades).map(([id, grade]) => {
+        const courseIndex = courses.findIndex(c => c.id === id);
+        return courseIndex >= 0 ? { i: courseIndex, g: grade } : null;
+      }).filter(Boolean),
+      s: semesters.map(s => ({ n: s.name, cr: s.credits, g: s.gpa })),
+    };
+    const encoded = btoa(JSON.stringify(state));
+    return `${window.location.origin}${window.location.pathname}?data=${encoded}`;
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      const link = generateShareLink();
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
+      toast({
+        title: "Link copied!",
+        description: "Share this link with others to show your GPA results.",
+      });
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast({
+        title: "Failed to copy",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleExportPDF = async () => {
+    if (!resultCardRef.current || isExporting) return;
+    
+    setIsExporting(true);
+    try {
+      const canvas = await html2canvas(resultCardRef.current, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+        logging: false,
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+      
+      const imgWidth = 190;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      pdf.setFillColor(34, 139, 34);
+      pdf.rect(0, 0, 210, 30, 'F');
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(20);
+      pdf.text('GPA Calculator Results', 105, 18, { align: 'center' });
+      
+      pdf.addImage(imgData, 'PNG', 10, 35, imgWidth, imgHeight);
+      
+      // Add course details
+      let yPos = 45 + imgHeight;
+      pdf.setTextColor(0, 0, 0);
+      pdf.setFontSize(14);
+      pdf.text('Course Details', 10, yPos);
+      yPos += 8;
+      
+      pdf.setFontSize(10);
+      courses.forEach((course) => {
+        const gradeValue = courseGrades[course.id];
+        const grade = GRADES.find(g => g.value === gradeValue);
+        const gradeLabel = grade ? grade.label : 'Not graded';
+        pdf.text(`• ${course.name} (${course.credits} CH): ${gradeLabel}`, 15, yPos);
+        yPos += 6;
+      });
+      
+      // Add footer
+      pdf.setFontSize(8);
+      pdf.setTextColor(128, 128, 128);
+      pdf.text(`Generated on ${new Date().toLocaleDateString()} • Pakistani HEC Grading Scale`, 105, 285, { align: 'center' });
+      
+      pdf.save('gpa-results.pdf');
+      
+      toast({
+        title: "PDF exported!",
+        description: "Your GPA results have been saved as a PDF.",
+      });
+    } catch {
+      toast({
+        title: "Export failed",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
    return (
      <div className="min-h-screen bg-background">
        {/* Header */}
@@ -182,7 +289,7 @@
  
        <main className="container mx-auto max-w-4xl px-4 py-6 space-y-6">
          {/* GPA Display Card */}
-         <Card className="border-2 border-primary/20 shadow-xl">
+        <Card className="border-2 border-primary/20 shadow-xl" ref={resultCardRef}>
            <CardContent className="pt-6">
              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
                <div className="p-4 rounded-lg bg-secondary">
@@ -202,6 +309,31 @@
                  </p>
                </div>
              </div>
+            
+            {/* Export/Share Buttons */}
+            {semesterGPA !== null && (
+              <div className="flex flex-wrap justify-center gap-3 mt-6 pt-4 border-t">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleExportPDF}
+                  disabled={isExporting}
+                  className="gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  {isExporting ? "Exporting..." : "Export PDF"}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleCopyLink}
+                  className="gap-2"
+                >
+                  {copied ? <Check className="h-4 w-4" /> : <Share2 className="h-4 w-4" />}
+                  {copied ? "Copied!" : "Copy Share Link"}
+                </Button>
+              </div>
+            )}
            </CardContent>
          </Card>
  
