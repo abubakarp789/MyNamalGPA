@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { PageTransition } from "@/components/PageTransition";
+import { SpeedInsights } from "@vercel/speed-insights/react";
+import { Analytics } from "@vercel/analytics/react";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Calculator from "./pages/Calculator";
@@ -36,6 +38,8 @@ const App = () => (
         <BrowserRouter>
           <AnimatedRoutes />
         </BrowserRouter>
+        <SpeedInsights />
+        <Analytics />
       </TooltipProvider>
     </ThemeProvider>
   </QueryClientProvider>
