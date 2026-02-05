@@ -73,8 +73,8 @@ export function sanitizeForPDF(text: string): string {
   }
   
   // Remove PDF control characters and potentially dangerous content
-  // eslint-disable-next-line no-control-regex
   return text
+    // eslint-disable-next-line no-control-regex
     .replace(/[\x00-\x1F\x7F-\x9F]/g, '') // Remove control characters
     .replace(/[()\\]/g, '\\$&') // Escape PDF special characters
     .substring(0, 100); // Limit length
