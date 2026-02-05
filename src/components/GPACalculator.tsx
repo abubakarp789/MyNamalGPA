@@ -1,4 +1,4 @@
- import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
  import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
  import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,6 +9,7 @@ import { BookOpen, Calculator, RotateCcw, Info, TrendingUp, Plus, Trash2, Downlo
  import html2canvas from "html2canvas";
  import { jsPDF } from "jspdf";
  import { toast } from "@/hooks/use-toast";
+import { useLocalStorage } from "@/hooks/use-local-storage";
  
  // HEC Pakistan Grading Scale
  const GRADES = [
@@ -44,20 +45,61 @@ import { BookOpen, Calculator, RotateCcw, Info, TrendingUp, Plus, Trash2, Downlo
  
  export function GPACalculator() {
    // Courses state
-   const [courses, setCourses] = useState<Course[]>([
+  const [courses, setCourses] = useLocalStorage<Course[]>("gpa-courses", [
      { id: generateId(), name: "Course 1", credits: 3 },
    ]);
    const [newCourseName, setNewCourseName] = useState("");
    const [newCourseCredits, setNewCourseCredits] = useState("3");
    
    // Grades state
-   const [courseGrades, setCourseGrades] = useState<CourseGrades>({});
+  const [courseGrades, setCourseGrades] = useLocalStorage<CourseGrades>("gpa-grades", {});
    
    // Previous semesters state
-   const [semesters, setSemesters] = useState<Semester[]>([]);
+  const [semesters, setSemesters] = useLocalStorage<Semester[]>("gpa-semesters", []);
    const [newSemesterName, setNewSemesterName] = useState("");
    const [newSemesterCredits, setNewSemesterCredits] = useState("");
    const [newSemesterGPA, setNewSemesterGPA] = useState("");
+
+  // Load from URL share link if present (takes priority over localStorage)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const data = params.get("data");
+    if (data) {
+      try {
+        const decoded = JSON.parse(atob(data));
+        if (decoded.c) {
+          const loadedCourses = decoded.c.map((c: { n: string; cr: number }) => ({
+            id: generateId(),
+            name: c.n,
+            credits: c.cr,
+          }));
+          setCourses(loadedCourses);
+          
+          if (decoded.g) {
+            const grades: CourseGrades = {};
+            decoded.g.forEach((g: { i: number; g: string }) => {
+              if (loadedCourses[g.i]) {
+                grades[loadedCourses[g.i].id] = g.g;
+              }
+            });
+            setCourseGrades(grades);
+          }
+        }
+        if (decoded.s) {
+          setSemesters(decoded.s.map((s: { n: string; cr: number; g: number }) => ({
+            id: generateId(),
+            name: s.n,
+            credits: s.cr,
+            gpa: s.g,
+          })));
+        }
+        // Clear the URL params after loading
+        window.history.replaceState({}, "", window.location.pathname);
+      } catch (error) {
+        console.warn("Failed to load shared data:", error);
+      }
+    }
+  }, []);
  
    const totalCredits = courses.reduce((sum, course) => sum + course.credits, 0);
  
