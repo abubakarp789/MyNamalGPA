@@ -1,4 +1,4 @@
-import { Heart } from "lucide-react";
+import { Heart, Linkedin, Github } from "lucide-react";
 import namalLogo from "@/assets/namal-logo.png";
 
 export function Footer() {
@@ -11,9 +11,31 @@ export function Footer() {
             <span className="font-semibold text-sm md:text-base text-foreground">Namal GPA Calculator</span>
           </div>
           
-          <p className="text-xs md:text-sm text-muted-foreground flex items-center gap-1">
-            Made with <Heart className="h-3 w-3 md:h-4 md:w-4 text-destructive fill-destructive" /> by Abu Bakar
-          </p>
+          <div className="flex items-center gap-3">
+            <p className="text-xs md:text-sm text-muted-foreground flex items-center gap-1">
+              Made with <Heart className="h-3 w-3 md:h-4 md:w-4 text-destructive fill-destructive" /> by Abu Bakar
+            </p>
+            <div className="flex items-center gap-2">
+              <a 
+                href="https://www.linkedin.com/in/abubakar56/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-primary transition-colors"
+                aria-label="LinkedIn"
+              >
+                <Linkedin className="h-4 w-4 md:h-5 md:w-5" />
+              </a>
+              <a 
+                href="https://github.com/abubakarp789" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-primary transition-colors"
+                aria-label="GitHub"
+              >
+                <Github className="h-4 w-4 md:h-5 md:w-5" />
+              </a>
+            </div>
+          </div>
           
           <p className="text-xs md:text-sm text-muted-foreground">
             © {new Date().getFullYear()} • HEC Pakistan
