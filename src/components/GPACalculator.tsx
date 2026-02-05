@@ -4,7 +4,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
  import { Button } from "@/components/ui/button";
  import { Input } from "@/components/ui/input";
-import { BookOpen, Calculator, RotateCcw, Info, TrendingUp, Plus, Trash2, Download, Share2, Check } from "lucide-react";
+import { BookOpen, Calculator, RotateCcw, Info, TrendingUp, Plus, Trash2, Download, Share2, Check, XCircle } from "lucide-react";
  import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
  import html2canvas from "html2canvas";
  import { jsPDF } from "jspdf";
@@ -205,6 +205,16 @@ import { useLocalStorage } from "@/hooks/use-local-storage";
      setCourseGrades({});
    };
  
+  const handleClearAll = () => {
+    setCourses([{ id: generateId(), name: "Course 1", credits: 3 }]);
+    setCourseGrades({});
+    setSemesters([]);
+    toast({
+      title: "All data cleared",
+      description: "Your courses, grades, and semesters have been reset.",
+    });
+  };
+
    const gradedCoursesCount = Object.keys(courseGrades).length;
    const totalPreviousCredits = semesters.reduce((sum, s) => sum + s.credits, 0);
  
@@ -389,6 +399,10 @@ import { useLocalStorage } from "@/hooks/use-local-storage";
                  <RotateCcw className="h-4 w-4" />
                  Reset Grades
                </Button>
+              <Button variant="outline" size="sm" onClick={handleClearAll} className="gap-2 text-destructive hover:text-destructive">
+                <XCircle className="h-4 w-4" />
+                Clear All
+              </Button>
              </div>
  
              {/* Add Course Form */}
