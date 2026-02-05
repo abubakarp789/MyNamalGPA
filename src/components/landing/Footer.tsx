@@ -13,7 +13,7 @@ export function Footer() {
           
           <div className="flex items-center gap-3">
             <p className="text-xs md:text-sm text-muted-foreground flex items-center gap-1">
-              Made with <Heart className="h-3 w-3 md:h-4 md:w-4 text-destructive fill-destructive" /> by Abu Bakar
+              Made with <Heart className="h-3 w-3 md:h-4 md:w-4 text-destructive fill-destructive" /> by <span className="font-bold text-foreground">Abu Bakar</span>
             </p>
             <div className="flex items-center gap-2">
               <a 
