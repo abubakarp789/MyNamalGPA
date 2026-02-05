@@ -40,7 +40,7 @@ const SEMESTER_HISTORY = [
   { semester: "Fall 2023", credits: 19, gpa: 2.37, cgpa: 2.65 },
   { semester: "Spring 2024", credits: 17, gpa: 2.14, cgpa: 2.52 },
   { semester: "Fall 2024", credits: 17, gpa: 2.82, cgpa: 2.58 },
-  { semester: "Spring 2025", credits: 17, gpa: 2.90, cgpa: 2.72 },
+  { semester: "Spring 2025", credits: 20, gpa: 2.90, cgpa: 2.72 },
 ];
 
 // Chart data with short labels
