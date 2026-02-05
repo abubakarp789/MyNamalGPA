@@ -11,7 +11,7 @@ MyNamalGPA is a modern, secure, and responsive web application designed specific
 
 Built with performance, security, and aesthetics in mind, this tool allows students to easily track their academic progress on any device with enterprise-grade security protections.
 
-🌐 **Live Demo**: [https://my-namal-gpa.vercel.app](https://my-namal-gpa.vercel.app)
+🌐 **Live Demo**: [https://mynamalgpa.vercel.app](https://mynamalgpa.vercel.app)
 
 ---
 
