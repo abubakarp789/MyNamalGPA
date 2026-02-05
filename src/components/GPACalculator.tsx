@@ -5,7 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
  import { Button } from "@/components/ui/button";
  import { Input } from "@/components/ui/input";
  import { Label } from "@/components/ui/label";
- import { GraduationCap, BookOpen, Calculator, RotateCcw, Info } from "lucide-react";
+import { GraduationCap, BookOpen, Calculator, RotateCcw, Info, TrendingUp } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
  
  // HEC Pakistan Grading Scale
  const GRADES = [
@@ -41,6 +42,14 @@ const SEMESTER_HISTORY = [
   { semester: "Fall 2024", credits: 17, gpa: 2.82, cgpa: 2.58 },
   { semester: "Spring 2025", credits: 17, gpa: 2.90, cgpa: 2.72 },
 ];
+
+// Chart data with short labels
+const CHART_DATA = SEMESTER_HISTORY.map((sem) => ({
+  name: sem.semester.replace("Spring ", "S").replace("Fall ", "F"),
+  fullName: sem.semester,
+  GPA: sem.gpa,
+  CGPA: sem.cgpa,
+}));
 
 // Calculate total previous credits and quality points
 const TOTAL_PREVIOUS_CREDITS = SEMESTER_HISTORY.reduce((sum, s) => sum + s.credits, 0); // 104 credits
@@ -149,19 +158,25 @@ const PREVIOUS_CGPA = SEMESTER_HISTORY[SEMESTER_HISTORY.length - 1].cgpa; // 2.7
  
          <Tabs defaultValue="courses" className="space-y-4">
            <TabsList className="grid w-full grid-cols-3">
-             <TabsTrigger value="courses" className="gap-2">
+            <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="courses" className="gap-1 text-xs sm:text-sm">
                <BookOpen className="h-4 w-4" />
                <span className="hidden sm:inline">Courses</span>
              </TabsTrigger>
-             <TabsTrigger value="cgpa" className="gap-2">
+            <TabsTrigger value="chart" className="gap-1 text-xs sm:text-sm">
+              <TrendingUp className="h-4 w-4" />
+              <span className="hidden sm:inline">Trend</span>
+            </TabsTrigger>
+            <TabsTrigger value="cgpa" className="gap-1 text-xs sm:text-sm">
                <Calculator className="h-4 w-4" />
                <span className="hidden sm:inline">CGPA</span>
              </TabsTrigger>
-             <TabsTrigger value="scale" className="gap-2">
+            <TabsTrigger value="scale" className="gap-1 text-xs sm:text-sm">
                <Info className="h-4 w-4" />
                <span className="hidden sm:inline">Grade Scale</span>
              </TabsTrigger>
            </TabsList>
+          </TabsList>
  
            {/* Courses Tab */}
            <TabsContent value="courses" className="space-y-4">
@@ -215,6 +230,79 @@ const PREVIOUS_CGPA = SEMESTER_HISTORY[SEMESTER_HISTORY.length - 1].cgpa; // 2.7
              </div>
            </TabsContent>
  
+          {/* Chart Tab */}
+          <TabsContent value="chart">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-primary" />
+                  GPA Trend Analysis
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={CHART_DATA} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis 
+                        dataKey="name" 
+                        tick={{ fontSize: 12 }}
+                        className="fill-muted-foreground"
+                      />
+                      <YAxis 
+                        domain={[0, 4]} 
+                        ticks={[0, 1, 2, 3, 4]}
+                        tick={{ fontSize: 12 }}
+                        className="fill-muted-foreground"
+                      />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px'
+                        }}
+                        labelFormatter={(_, payload) => payload[0]?.payload?.fullName || ''}
+                      />
+                      <Legend />
+                      <Line 
+                        type="monotone" 
+                        dataKey="GPA" 
+                        stroke="hsl(var(--accent))" 
+                        strokeWidth={2}
+                        dot={{ fill: 'hsl(var(--accent))', strokeWidth: 2, r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="CGPA" 
+                        stroke="hsl(var(--primary))" 
+                        strokeWidth={3}
+                        dot={{ fill: 'hsl(var(--primary))', strokeWidth: 2, r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-4 text-center">
+                  <div className="p-3 bg-secondary rounded-lg">
+                    <p className="text-xs text-muted-foreground">Highest GPA</p>
+                    <p className="text-xl font-bold text-primary">
+                      {Math.max(...SEMESTER_HISTORY.map(s => s.gpa)).toFixed(2)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Fall 2022</p>
+                  </div>
+                  <div className="p-3 bg-secondary rounded-lg">
+                    <p className="text-xs text-muted-foreground">Current CGPA</p>
+                    <p className="text-xl font-bold text-primary">
+                      {SEMESTER_HISTORY[SEMESTER_HISTORY.length - 1].cgpa.toFixed(2)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">After 6 Semesters</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
            {/* CGPA Tab */}
            <TabsContent value="cgpa">
              <Card>
