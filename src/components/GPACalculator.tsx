@@ -10,6 +10,14 @@ import { BookOpen, Calculator, RotateCcw, Info, TrendingUp, Plus, Trash2, Downlo
  import { jsPDF } from "jspdf";
  import { toast } from "@/hooks/use-toast";
 import { useLocalStorage } from "@/hooks/use-local-storage";
+import { 
+  sanitizeInput, 
+  sanitizeForPDF, 
+  generateSecureId, 
+  validateSharedData,
+  isClipboardAvailable,
+  safeJSONParse 
+} from "@/lib/security";
  
  // HEC Pakistan Grading Scale
  const GRADES = [
@@ -41,7 +49,8 @@ import { useLocalStorage } from "@/hooks/use-local-storage";
  
  type CourseGrades = Record<string, string>;
  
- const generateId = () => Math.random().toString(36).substr(2, 9);
+ // Use cryptographically secure ID generation
+ const generateId = generateSecureId;
  
  export function GPACalculator() {
    // Courses state
@@ -60,46 +69,72 @@ import { useLocalStorage } from "@/hooks/use-local-storage";
    const [newSemesterCredits, setNewSemesterCredits] = useState("");
    const [newSemesterGPA, setNewSemesterGPA] = useState("");
 
-  // Load from URL share link if present (takes priority over localStorage)
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const data = params.get("data");
-    if (data) {
-      try {
-        const decoded = JSON.parse(atob(data));
-        if (decoded.c) {
-          const loadedCourses = decoded.c.map((c: { n: string; cr: number }) => ({
-            id: generateId(),
-            name: c.n,
-            credits: c.cr,
-          }));
-          setCourses(loadedCourses);
-          
-          if (decoded.g) {
-            const grades: CourseGrades = {};
-            decoded.g.forEach((g: { i: number; g: string }) => {
-              if (loadedCourses[g.i]) {
-                grades[loadedCourses[g.i].id] = g.g;
-              }
-            });
-            setCourseGrades(grades);
-          }
-        }
-        if (decoded.s) {
-          setSemesters(decoded.s.map((s: { n: string; cr: number; g: number }) => ({
-            id: generateId(),
-            name: s.n,
-            credits: s.cr,
-            gpa: s.g,
-          })));
-        }
-        // Clear the URL params after loading
-        window.history.replaceState({}, "", window.location.pathname);
-      } catch (error) {
-        console.warn("Failed to load shared data:", error);
-      }
-    }
-  }, []);
+   // Load from URL share link if present (takes priority over localStorage)
+   useEffect(() => {
+     const params = new URLSearchParams(window.location.search);
+     const data = params.get("data");
+     if (data) {
+       try {
+         // Use safe JSON parsing with prototype pollution protection
+         const decoded = safeJSONParse(atob(data), null);
+         
+         // Validate the data structure before processing
+         if (!validateSharedData(decoded)) {
+           console.warn("Invalid shared data structure");
+           toast({
+             title: "Invalid share link",
+             description: "The shared data is corrupted or invalid.",
+             variant: "destructive",
+           });
+           return;
+         }
+         
+         if (decoded.c && Array.isArray(decoded.c)) {
+           const loadedCourses = decoded.c.map((c: { n: string; cr: number }) => ({
+             id: generateId(),
+             name: sanitizeInput(c.n).substring(0, 50), // Sanitize and limit length
+             credits: Math.min(Math.max(c.cr, 1), 6), // Validate credit range
+           }));
+           setCourses(loadedCourses);
+           
+           if (decoded.g && Array.isArray(decoded.g)) {
+             const grades: CourseGrades = {};
+             decoded.g.forEach((g: { i: number; g: string }) => {
+               if (loadedCourses[g.i] && typeof g.g === 'string') {
+                 // Validate grade is in allowed list
+                 const isValidGrade = GRADES.some(grade => grade.value === g.g);
+                 if (isValidGrade) {
+                   grades[loadedCourses[g.i].id] = g.g;
+                 }
+               }
+             });
+             setCourseGrades(grades);
+           }
+         }
+         if (decoded.s && Array.isArray(decoded.s)) {
+           setSemesters(decoded.s.map((s: { n: string; cr: number; g: number }) => ({
+             id: generateId(),
+             name: sanitizeInput(s.n).substring(0, 30), // Sanitize and limit length
+             credits: Math.min(Math.max(s.cr, 1), 50), // Validate credit range
+             gpa: Math.min(Math.max(s.g, 0), 4), // Validate GPA range
+           })));
+         }
+         // Clear the URL params after loading
+         window.history.replaceState({}, "", window.location.pathname);
+         toast({
+           title: "Data loaded",
+           description: "Shared GPA data has been loaded successfully.",
+         });
+       } catch (error) {
+         console.warn("Failed to load shared data:", error);
+         toast({
+           title: "Error loading data",
+           description: "Failed to load shared data. The link may be corrupted.",
+           variant: "destructive",
+         });
+       }
+     }
+   }, []);
  
    const totalCredits = courses.reduce((sum, course) => sum + course.credits, 0);
  
@@ -166,7 +201,17 @@ import { useLocalStorage } from "@/hooks/use-local-storage";
    const addCourse = () => {
      if (!newCourseName.trim()) return;
      const credits = parseInt(newCourseCredits) || 3;
-     setCourses((prev) => [...prev, { id: generateId(), name: newCourseName.trim(), credits }]);
+     // Sanitize course name to prevent XSS
+     const sanitizedName = sanitizeInput(newCourseName).substring(0, 50);
+     if (!sanitizedName) {
+       toast({
+         title: "Invalid course name",
+         description: "Course name contains invalid characters.",
+         variant: "destructive",
+       });
+       return;
+     }
+     setCourses((prev) => [...prev, { id: generateId(), name: sanitizedName, credits: Math.min(credits, 6) }]);
      setNewCourseName("");
      setNewCourseCredits("3");
    };
@@ -184,11 +229,29 @@ import { useLocalStorage } from "@/hooks/use-local-storage";
      if (!newSemesterName.trim() || !newSemesterCredits || !newSemesterGPA) return;
      const credits = parseInt(newSemesterCredits) || 0;
      const gpa = parseFloat(newSemesterGPA) || 0;
-     if (credits <= 0 || gpa < 0 || gpa > 4) return;
+     if (credits <= 0 || credits > 50 || gpa < 0 || gpa > 4) {
+       toast({
+         title: "Invalid input",
+         description: "Please check your semester credits (1-50) and GPA (0-4).",
+         variant: "destructive",
+       });
+       return;
+     }
+     
+     // Sanitize semester name to prevent XSS
+     const sanitizedName = sanitizeInput(newSemesterName).substring(0, 30);
+     if (!sanitizedName) {
+       toast({
+         title: "Invalid semester name",
+         description: "Semester name contains invalid characters.",
+         variant: "destructive",
+       });
+       return;
+     }
      
      setSemesters((prev) => [...prev, { 
        id: generateId(), 
-       name: newSemesterName.trim(), 
+       name: sanitizedName, 
        credits, 
        gpa: Math.min(4, Math.max(0, gpa))
      }]);
@@ -236,24 +299,35 @@ import { useLocalStorage } from "@/hooks/use-local-storage";
     return `${window.location.origin}${window.location.pathname}?data=${encoded}`;
   };
 
-  const handleCopyLink = async () => {
-    try {
-      const link = generateShareLink();
-      await navigator.clipboard.writeText(link);
-      setCopied(true);
-      toast({
-        title: "Link copied!",
-        description: "Share this link with others to show your GPA results.",
-      });
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      toast({
-        title: "Failed to copy",
-        description: "Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
+   const handleCopyLink = async () => {
+     // Check if clipboard API is available and in secure context
+     if (!isClipboardAvailable()) {
+       toast({
+         title: "Clipboard not available",
+         description: "Clipboard access requires HTTPS or localhost. Please copy the link manually from the address bar.",
+         variant: "destructive",
+       });
+       return;
+     }
+     
+     try {
+       const link = generateShareLink();
+       await navigator.clipboard.writeText(link);
+       setCopied(true);
+       toast({
+         title: "Link copied!",
+         description: "Share this link with others to show your GPA results.",
+       });
+       setTimeout(() => setCopied(false), 2000);
+     } catch (error) {
+       console.error("Clipboard error:", error);
+       toast({
+         title: "Failed to copy",
+         description: "Please try again or copy the link manually.",
+         variant: "destructive",
+       });
+     }
+   };
 
   const handleExportPDF = async () => {
     if (!resultCardRef.current || isExporting) return;
@@ -291,14 +365,17 @@ import { useLocalStorage } from "@/hooks/use-local-storage";
       pdf.text('Course Details', 10, yPos);
       yPos += 8;
       
-      pdf.setFontSize(10);
-      courses.forEach((course) => {
-        const gradeValue = courseGrades[course.id];
-        const grade = GRADES.find(g => g.value === gradeValue);
-        const gradeLabel = grade ? grade.label : 'Not graded';
-        pdf.text(`• ${course.name} (${course.credits} CH): ${gradeLabel}`, 15, yPos);
-        yPos += 6;
-      });
+       pdf.setFontSize(10);
+       courses.forEach((course) => {
+         const gradeValue = courseGrades[course.id];
+         const grade = GRADES.find(g => g.value === gradeValue);
+         const gradeLabel = grade ? grade.label : 'Not graded';
+         // Sanitize course name for PDF to prevent injection
+         const sanitizedCourseName = sanitizeForPDF(course.name);
+         const sanitizedGradeLabel = sanitizeForPDF(gradeLabel);
+         pdf.text(`• ${sanitizedCourseName} (${course.credits} CH): ${sanitizedGradeLabel}`, 15, yPos);
+         yPos += 6;
+       });
       
       // Add footer
       pdf.setFontSize(8);
