@@ -143,29 +143,6 @@ vercel --prod
 - **Output Directory**: `dist`
 - **Install Command**: `npm install`
 - **Security Headers**: Pre-configured with security headers
-
-### Deploy to Netlify
-
-#### Option 1: Using Netlify CLI
-```bash
-# Install Netlify CLI globally
-npm i -g netlify-cli
-
-# Deploy to Netlify
-netlify deploy --prod --dir=dist
-```
-
-#### Option 2: Drag & Drop
-1. Run `npm run build` to create production build
-2. Go to [Netlify](https://www.netlify.com/)
-3. Drag and drop the `dist/` folder
-
-#### Option 3: Git Integration
-1. Push your code to GitHub
-2. Connect your repository to Netlify
-3. Build settings will be auto-configured
-4. Deploy!
-
 ---
 
 ## 🔒 Security Audit Results
@@ -239,15 +216,6 @@ Use this tab to calculate your cumulative GPA across all semesters:
    - Check "This is a repeat course" if retaking a failed course
    - Select the original semester where you first took it
 4. **View CGPA**: Your cumulative GPA calculates automatically
-
-#### **Example:**
-```
-Semester 3:
-- MTH-123: Linear Algebra | 3 CH | Grade: F ❌
-
-Semester 6:
-- ENG-112: Writing [Repeat] | 3 CH | Grade: B ✅ (repeating from Sem 4)
-```
 
 The system automatically:
 - Excludes failed courses from CGPA
