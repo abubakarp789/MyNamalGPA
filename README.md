@@ -19,17 +19,20 @@ Built with performance, security, and aesthetics in mind, this tool allows stude
 
 ### 🎓 Academic Features
 - **Accurate GPA Calculations**: Adheres strictly to Namal University and HEC grading scales (A=4.0 to F=0.0)
-- **CGPA Tracking**: Calculate cumulative GPA across multiple semesters
-- **Grade Visualization**: Interactive charts showing GPA trends over time
+- **CGPA Tracking**: Calculate cumulative GPA by adding all courses from all semesters
+- **Course Repeat Handling**: Easily mark repeated courses to automatically handle grade replacement
 - **PDF Export**: Download your GPA results as a professionally formatted PDF
 - **Share Links**: Generate shareable links to send your GPA calculations to others
+- **Real-time Updates**: Instant GPA and CGPA calculation as you add courses
 
 ### 🎨 UI/UX Features
 - **Modern Interface**: Sleek, premium design built with **Tailwind CSS** and **shadcn/ui**
+- **Beautiful Hero Section**: Gradient backgrounds with glass-morphism effects
 - **Dark Mode Support**: Built-in light and dark themes for comfortable viewing
 - **Responsive Design**: Fully optimized for desktop, tablets, and mobile devices
 - **Smooth Animations**: Framer Motion powered transitions and interactions
-- **Real-time Updates**: Instant feedback and validation
+- **Course Grouping**: Automatic semester-wise organization of courses
+- **Real-time Updates**: Instant GPA and CGPA calculation
 
 ### 🔒 Security Features (Enterprise-Grade)
 - **XSS Protection**: All user inputs sanitized using DOMPurify
@@ -60,7 +63,6 @@ This project is built using a modern, secure frontend ecosystem:
 - **Forms**: [React Hook Form](https://react-hook-form.com/) 7.61.1 + [Zod](https://zod.dev/) 3.25.76 for type-safe form validation
 
 ### Visualization & Export
-- **Charts**: [Recharts](https://recharts.org/) 2.15.4 for visualizing GPA trends
 - **PDF Generation**: [jsPDF](https://github.com/parallax/jsPDF) 4.1.0 + [html2canvas](https://html2canvas.hertzen.com/) 1.4.1 for transcript export
 - **Animations**: [Framer Motion](https://www.framer.com/motion/) 12.31.1 for smooth transitions
 
@@ -213,6 +215,45 @@ The application uses the official Pakistani Higher Education Commission (HEC) gr
 | D+ | 1.33 | 50-52% |
 | D | 1.00 | 45-49% |
 | F | 0.00 | Below 45% |
+
+---
+
+## 📖 How to Use
+
+### 🧮 **GPA Calculator (Current Semester)**
+
+Use this tab to calculate your GPA for the current semester:
+
+1. **Add Courses**: Enter course name and credit hours
+2. **Select Grades**: Choose grades from the dropdown (A, A-, B+, etc.)
+3. **View Results**: Your GPA updates automatically in real-time
+4. **Export**: Download results as PDF or share via link
+
+### 📊 **CGPA Tracker (All Semesters)**
+
+Use this tab to calculate your cumulative GPA across all semesters:
+
+1. **Select Semester**: Choose which semester the course belongs to
+2. **Add All Courses**: Enter every course you've taken with its grade
+3. **Handle Repeats**: 
+   - Check "This is a repeat course" if retaking a failed course
+   - Select the original semester where you first took it
+4. **View CGPA**: Your cumulative GPA calculates automatically
+
+#### **Example:**
+```
+Semester 3:
+- MTH-123: Linear Algebra | 3 CH | Grade: F ❌
+
+Semester 6:
+- ENG-112: Writing [Repeat] | 3 CH | Grade: B ✅ (repeating from Sem 4)
+```
+
+The system automatically:
+- Excludes failed courses from CGPA
+- Replaces failed grades with repeat grades
+- Shows semester-wise GPA breakdown
+- Calculates accurate cumulative GPA
 
 ---
 
