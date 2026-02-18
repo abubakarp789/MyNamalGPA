@@ -44,6 +44,7 @@ interface CGPACourse extends Course {
   grade: string;
   isRepeat?: boolean;
   originalSemester?: number;
+  originalCourseId?: string;
 }
 
 type CourseGrades = Record<string, string>;
@@ -70,6 +71,7 @@ export function GPACalculator() {
   const [newCgpaCourseGrade, setNewCgpaCourseGrade] = useState("");
   const [isRepeat, setIsRepeat] = useState(false);
   const [repeatFromSemester, setRepeatFromSemester] = useState("");
+  const [selectedOriginalCourseId, setSelectedOriginalCourseId] = useState<string>("");
 
   // Load from URL share link if present
   useEffect(() => {
@@ -107,6 +109,20 @@ export function GPACalculator() {
               }
             });
             setCourseGrades(grades);
+          }
+          
+          if (decoded.cc && Array.isArray(decoded.cc)) {
+            const loadedCgpaCourses = decoded.cc.map((c: { n: string; cr: number; s: number; gr: string; ir: boolean; os: number | null; oci: string | null }) => ({
+              id: generateId(),
+              name: sanitizeInput(c.n).substring(0, 50),
+              credits: Math.min(Math.max(c.cr, 1), 6),
+              semester: c.s,
+              grade: c.gr,
+              isRepeat: c.ir,
+              originalSemester: c.os,
+              originalCourseId: c.oci
+            }));
+            setCgpaCourses(loadedCgpaCourses);
           }
         }
         window.history.replaceState({}, "", window.location.pathname);
@@ -148,17 +164,27 @@ export function GPACalculator() {
 
   // CGPA Calculation
   const { cgpa, totalCgpaCredits, totalCgpaPoints, semesterStats } = useMemo(() => {
-    let totalCredits = 0;
-    let totalPoints = 0;
+    // Step 1: Find all original course IDs that have been replaced by a repeat
+    const replacedCourseIds = new Set(
+      cgpaCourses
+        .filter(c => c.isRepeat && c.originalCourseId)
+        .map(c => c.originalCourseId!)
+    );
+
+    let cgpaTotalCredits = 0;
+    let cgpaTotalPoints = 0;
     const semesterMap = new Map<number, { credits: number; points: number; gpa: number }>();
 
     // Process all CGPA courses
     cgpaCourses.forEach((course) => {
+      // Skip replaced courses
+      if (replacedCourseIds.has(course.id)) return;
+      
       const grade = GRADES.find(g => g.value === course.grade);
       if (grade) {
         const points = grade.points * course.credits;
-        totalCredits += course.credits;
-        totalPoints += points;
+        cgpaTotalCredits += course.credits;
+        cgpaTotalPoints += points;
 
         // Track per semester
         const sem = semesterMap.get(course.semester) || { credits: 0, points: 0, gpa: 0 };
@@ -178,9 +204,9 @@ export function GPACalculator() {
       }))
       .sort((a, b) => a.semester - b.semester);
 
-    const cgpa = totalCredits > 0 ? totalPoints / totalCredits : 0;
+    const cgpa = cgpaTotalCredits > 0 ? cgpaTotalPoints / cgpaTotalCredits : 0;
 
-    return { cgpa, totalCgpaCredits: totalCredits, totalCgpaPoints: totalPoints, semesterStats: stats };
+    return { cgpa, totalCgpaCredits: cgpaTotalCredits, totalCgpaPoints: cgpaTotalPoints, semesterStats: stats };
   }, [cgpaCourses]);
 
   // GPA Tab functions
@@ -190,13 +216,20 @@ export function GPACalculator() {
 
   const addCourse = () => {
     if (!newCourseName.trim()) return;
-    const credits = parseInt(newCourseCredits) || 3;
+    const credits = Math.min(Math.max(parseInt(newCourseCredits) || 3, 1), 6);
     const sanitizedName = sanitizeInput(newCourseName).substring(0, 50);
+    
     if (!sanitizedName) {
       toast({ title: "Invalid course name", variant: "destructive" });
       return;
     }
-    setCourses((prev) => [...prev, { id: generateId(), name: sanitizedName, credits: Math.min(credits, 6) }]);
+    
+    if (credits < 1 || credits > 6) {
+      toast({ title: "Credit hours must be between 1 and 6", variant: "destructive" });
+      return;
+    }
+    
+    setCourses((prev) => [...prev, { id: generateId(), name: sanitizedName, credits }]);
     setNewCourseName("");
     setNewCourseCredits("3");
   };
@@ -226,7 +259,7 @@ export function GPACalculator() {
       toast({ title: "Please enter course name and grade", variant: "destructive" });
       return;
     }
-    const credits = parseInt(newCgpaCourseCredits) || 3;
+    const credits = Math.min(Math.max(parseInt(newCgpaCourseCredits) || 3, 1), 6);
     const semester = parseInt(selectedSemester) || 1;
     const sanitizedName = sanitizeInput(newCgpaCourseName).substring(0, 50);
     
@@ -234,15 +267,31 @@ export function GPACalculator() {
       toast({ title: "Invalid course name", variant: "destructive" });
       return;
     }
+    
+    if (credits < 1 || credits > 6) {
+      toast({ title: "Credit hours must be between 1 and 6", variant: "destructive" });
+      return;
+    }
+    
+    if (isRepeat && repeatFromSemester && parseInt(repeatFromSemester) === semester) {
+      toast({ 
+        title: "Original semester cannot be the same as current semester", 
+        variant: "destructive" 
+      });
+      return;
+    }
 
     const newCourse: CGPACourse = {
       id: generateId(),
       name: sanitizedName,
-      credits: Math.min(credits, 6),
+      credits,
       semester,
       grade: newCgpaCourseGrade,
       isRepeat,
-      ...(isRepeat && repeatFromSemester ? { originalSemester: parseInt(repeatFromSemester) } : {})
+      ...(isRepeat && repeatFromSemester ? { 
+        originalSemester: parseInt(repeatFromSemester), 
+        originalCourseId: selectedOriginalCourseId 
+      } : {})
     };
 
     setCgpaCourses((prev) => [...prev, newCourse]);
@@ -251,6 +300,7 @@ export function GPACalculator() {
     setNewCgpaCourseGrade("");
     setIsRepeat(false);
     setRepeatFromSemester("");
+    setSelectedOriginalCourseId("");
   };
 
   const removeCgpaCourse = (id: string) => {
@@ -275,6 +325,15 @@ export function GPACalculator() {
         const courseIndex = courses.findIndex(c => c.id === id);
         return courseIndex >= 0 ? { i: courseIndex, g: grade } : null;
       }).filter(Boolean),
+      cc: cgpaCourses.map(c => ({
+        n: c.name, 
+        cr: c.credits, 
+        s: c.semester,
+        gr: c.grade, 
+        ir: c.isRepeat ?? false,
+        os: c.originalSemester ?? null,
+        oci: c.originalCourseId ?? null
+      })),
     };
     const encoded = btoa(JSON.stringify(state));
     return `${window.location.origin}${window.location.pathname}?data=${encoded}`;
@@ -622,18 +681,36 @@ export function GPACalculator() {
                   <span className="text-sm text-muted-foreground">This is a repeat course</span>
                 </label>
                 {isRepeat && (
-                  <Select value={repeatFromSemester} onValueChange={setRepeatFromSemester}>
-                    <SelectTrigger className="w-40 h-9">
-                      <SelectValue placeholder="Original semester" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 8 }, (_, i) => (
-                        <SelectItem key={i + 1} value={(i + 1).toString()}>
-                          Semester {i + 1}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <>
+                    <Select value={repeatFromSemester} onValueChange={setRepeatFromSemester}>
+                      <SelectTrigger className="w-40 h-9">
+                        <SelectValue placeholder="Original semester" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 8 }, (_, i) => i + 1)
+                          .filter(sem => sem !== parseInt(selectedSemester))
+                          .map(sem => (
+                            <SelectItem key={sem} value={sem.toString()}>
+                              Semester {sem}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    <Select value={selectedOriginalCourseId} onValueChange={setSelectedOriginalCourseId}>
+                      <SelectTrigger className="w-48 h-9">
+                        <SelectValue placeholder="Select original course" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {cgpaCourses
+                          .filter(c => c.semester === parseInt(repeatFromSemester) && !c.isRepeat)
+                          .map(course => (
+                            <SelectItem key={course.id} value={course.id}>
+                              {course.name} ({course.credits} CH)
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </>
                 )}
                 <Button onClick={addCgpaCourse} className="gap-2 ml-auto">
                   <Plus className="h-4 w-4" />
@@ -647,14 +724,11 @@ export function GPACalculator() {
                   {Array.from({ length: 8 }, (_, i) => i + 1).map((semNum) => {
                     const semCourses = cgpaCourses.filter(c => c.semester === semNum);
                     if (semCourses.length === 0) return null;
-                    
-                    const semCredits = semCourses.reduce((sum, c) => sum + c.credits, 0);
-                    const semPoints = semCourses.reduce((sum, c) => {
-                      const grade = GRADES.find(g => g.value === c.grade);
-                      return sum + (grade ? grade.points * c.credits : 0);
-                    }, 0);
-                    const semGPA = semCredits > 0 ? semPoints / semCredits : 0;
-                    
+                                  
+                    const semStat = semesterStats.find(s => s.semester === semNum);
+                    const semGPA = semStat?.gpa ?? 0;
+                    const semCredits = semStat?.credits ?? 0;
+                                  
                     return (
                       <div key={semNum} className="border border-border/50 rounded-xl overflow-hidden">
                         <div className="bg-muted/50 px-4 py-3 flex items-center justify-between">
