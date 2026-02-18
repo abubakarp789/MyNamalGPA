@@ -112,7 +112,7 @@ export function GPACalculator() {
           }
           
           if (decoded.cc && Array.isArray(decoded.cc)) {
-            const loadedCgpaCourses = decoded.cc.map((c: { n: string; cr: number; s: number; gr: string; ir: boolean; os: number | null; oci: string | null }) => ({
+            const loadedCgpaCourses = decoded.cc.map((c: { n: string; cr: number; s: number; gr: string; ir: boolean; os: number | null; oci: number | null }) => ({
               id: generateId(),
               name: sanitizeInput(c.n).substring(0, 50),
               credits: Math.min(Math.max(c.cr, 1), 6),
@@ -120,8 +120,15 @@ export function GPACalculator() {
               grade: c.gr,
               isRepeat: c.ir,
               originalSemester: c.os,
-              originalCourseId: c.oci
+              originalCourseId: undefined as string | undefined,
             }));
+            
+            decoded.cc.forEach((c: { oci: number | null }, i: number) => {
+              if (typeof c.oci === 'number' && c.oci >= 0 && loadedCgpaCourses[c.oci]) {
+                loadedCgpaCourses[i].originalCourseId = loadedCgpaCourses[c.oci].id;
+              }
+            });
+            
             setCgpaCourses(loadedCgpaCourses);
           }
         }
@@ -216,16 +223,16 @@ export function GPACalculator() {
 
   const addCourse = () => {
     if (!newCourseName.trim()) return;
-    const credits = Math.min(Math.max(parseInt(newCourseCredits) || 3, 1), 6);
+    const rawCredits = parseInt(newCourseCredits);
+    if (isNaN(rawCredits) || rawCredits < 1 || rawCredits > 6) {
+      toast({ title: "Credit hours must be between 1 and 6", variant: "destructive" });
+      return;
+    }
+    const credits = rawCredits;
     const sanitizedName = sanitizeInput(newCourseName).substring(0, 50);
     
     if (!sanitizedName) {
       toast({ title: "Invalid course name", variant: "destructive" });
-      return;
-    }
-    
-    if (credits < 1 || credits > 6) {
-      toast({ title: "Credit hours must be between 1 and 6", variant: "destructive" });
       return;
     }
     
@@ -259,7 +266,12 @@ export function GPACalculator() {
       toast({ title: "Please enter course name and grade", variant: "destructive" });
       return;
     }
-    const credits = Math.min(Math.max(parseInt(newCgpaCourseCredits) || 3, 1), 6);
+    const rawCredits = parseInt(newCgpaCourseCredits);
+    if (isNaN(rawCredits) || rawCredits < 1 || rawCredits > 6) {
+      toast({ title: "Credit hours must be between 1 and 6", variant: "destructive" });
+      return;
+    }
+    const credits = rawCredits;
     const semester = parseInt(selectedSemester) || 1;
     const sanitizedName = sanitizeInput(newCgpaCourseName).substring(0, 50);
     
@@ -268,9 +280,19 @@ export function GPACalculator() {
       return;
     }
     
-    if (credits < 1 || credits > 6) {
-      toast({ title: "Credit hours must be between 1 and 6", variant: "destructive" });
-      return;
+    if (isRepeat) {
+      if (!repeatFromSemester) {
+        toast({ title: "Please select the original semester", variant: "destructive" });
+        return;
+      }
+      if (!selectedOriginalCourseId) {
+        toast({ 
+          title: "Please select the original course", 
+          description: "No eligible courses found in that semester? Make sure the original course was added first.",
+          variant: "destructive" 
+        });
+        return;
+      }
     }
     
     if (isRepeat && repeatFromSemester && parseInt(repeatFromSemester) === semester) {
@@ -325,14 +347,16 @@ export function GPACalculator() {
         const courseIndex = courses.findIndex(c => c.id === id);
         return courseIndex >= 0 ? { i: courseIndex, g: grade } : null;
       }).filter(Boolean),
-      cc: cgpaCourses.map(c => ({
+      cc: cgpaCourses.map((c, idx) => ({
         n: c.name, 
         cr: c.credits, 
         s: c.semester,
         gr: c.grade, 
         ir: c.isRepeat ?? false,
         os: c.originalSemester ?? null,
-        oci: c.originalCourseId ?? null
+        oci: c.originalCourseId
+          ? cgpaCourses.findIndex(orig => orig.id === c.originalCourseId)
+          : null
       })),
     };
     const encoded = btoa(JSON.stringify(state));
@@ -675,7 +699,13 @@ export function GPACalculator() {
                   <input
                     type="checkbox"
                     checked={isRepeat}
-                    onChange={(e) => setIsRepeat(e.target.checked)}
+                    onChange={(e) => {
+                      setIsRepeat(e.target.checked);
+                      if (!e.target.checked) {
+                        setRepeatFromSemester("");
+                        setSelectedOriginalCourseId("");
+                      }
+                    }}
                     className="w-4 h-4 rounded border-border"
                   />
                   <span className="text-sm text-muted-foreground">This is a repeat course</span>
